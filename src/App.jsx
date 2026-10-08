@@ -22,7 +22,7 @@ function App() {
         {/* Home */}
         <Route
           path="/"
-          element={<Navigate to="/register" />}
+          element={<Navigate to="/register" replace />}
         />
 
         {/* Authentication */}
@@ -36,7 +36,7 @@ function App() {
           element={<Login />}
         />
 
-        {/* Jobs */}
+        {/* Public Job Pages */}
         <Route
           path="/jobs"
           element={<Jobs />}
@@ -54,19 +54,29 @@ function App() {
 
         {/* Job Seeker Dashboard */}
         <Route
-  path="/job-seeker/dashboard"
-  element={
-    <ProtectedRoute>
-      <JobSeekerHome />
-    </ProtectedRoute>
-  }
-/>
+          path="/job-seeker/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["JOB_SEEKER"]}>
+              <JobSeekerHome />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* My Applications */}
+        <Route
+          path="/my-applications"
+          element={
+            <ProtectedRoute allowedRoles={["JOB_SEEKER"]}>
+              <MyApplications />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Recruiter Dashboard */}
         <Route
           path="/recruiter/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["RECRUITER"]}>
               <RecruiterDashboard />
             </ProtectedRoute>
           }
@@ -76,28 +86,17 @@ function App() {
         <Route
           path="/admin/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
               <AdminDashboard />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/my-applications"
-          element={
-            <ProtectedRoute>
-           <MyApplications />
-    </ProtectedRoute>
-  }
-/>
 
-<Route
-  path="/job-seeker/dashboard"
-  element={
-    <ProtectedRoute>
-      <JobSeekerHome />
-    </ProtectedRoute>
-  }
-/>
+        {/* Unknown URL */}
+        <Route
+          path="*"
+          element={<Navigate to="/login" replace />}
+        />
 
       </Routes>
     </BrowserRouter>
