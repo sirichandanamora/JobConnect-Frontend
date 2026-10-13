@@ -18,7 +18,7 @@ function Jobs() {
   const fetchJobs = async () => {
     try {
       const response = await axios.get(
-        "https://https://jobconnect-backend-u4x3.onrender.com/api/jobs"
+        "https://jobconnect-backend-u4x3.onrender.com/api/jobs"
       );
 
       setJobs(response.data);

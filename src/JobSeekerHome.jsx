@@ -32,7 +32,7 @@ function JobSeekerHome() {
   const fetchJobs = async () => {
     try {
       const response = await axios.get(
-        "https://https://jobconnect-backend-u4x3.onrender.com/api/jobs"
+        "https://jobconnect-backend-u4x3.onrender.com/api/jobs"
       );
 
       setJobs(response.data);
@@ -47,7 +47,7 @@ function JobSeekerHome() {
   const fetchApplications = async () => {
     try {
       const response = await axios.get(
-        `https://https://jobconnect-backend-u4x3.onrender.com/api/applications/user/${userId}`
+        `https://jobconnect-backend-u4x3.onrender.com/api/applications/user/${userId}`
       );
 
       setApplications(response.data);
@@ -75,7 +75,7 @@ function JobSeekerHome() {
 
     try {
       await axios.post(
-        `https://https://jobconnect-backend-u4x3.onrender.com/api/applications?jobId=${jobId}&applicantId=${userId}`
+        `https://jobconnect-backend-u4x3.onrender.com/api/applications?jobId=${jobId}&applicantId=${userId}`
       );
 
       setMessage("Application submitted successfully!");

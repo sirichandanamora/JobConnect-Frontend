@@ -23,7 +23,7 @@ function ApplyJob() {
 
    try {
        await axios.post(
-         `https://https://jobconnect-backend-u4x3.onrender.com/api/applications?jobId=${id}&applicantId=${applicantId}`
+         `https://jobconnect-backend-u4x3.onrender.com/api/applications?jobId=${id}&applicantId=${applicantId}`
   );
 
       setMessage("Application submitted successfully! 🎉");

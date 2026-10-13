@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import axios from "axios";
 
@@ -6,7 +7,7 @@ function Register() {
     name: "",
     email: "",
     password: "",
-    role: "JOB_SEEKER"
+    role: "JOB_SEEKER",
   });
 
   const [message, setMessage] = useState("");
@@ -14,29 +15,34 @@ function Register() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage("");
 
     try {
       const response = await axios.post(
-       axios.post("https://jobconnect-backend-u4x3.onrender.com/api/auth/register",
-   formData),formData
+        "https://jobconnect-backend-u4x3.onrender.com/api/auth/register",
+        formData
       );
 
       console.log(response.data);
       setMessage("Registration successful! 🎉");
-
     } catch (error) {
-      console.error(error);
+      console.error("Registration error:", error);
 
       if (error.response) {
-        setMessage(error.response.data);
+        const data = error.response.data;
+        setMessage(
+          typeof data === "string"
+            ? data
+            : data?.message || "Registration failed. Please try again."
+        );
       } else {
-        setMessage("Something went wrong!");
+        setMessage("Unable to connect to the server. Please try again.");
       }
     }
   };
@@ -47,7 +53,6 @@ function Register() {
       <h2>Create Account</h2>
 
       <form onSubmit={handleSubmit}>
-
         <input
           type="text"
           name="name"
@@ -57,7 +62,8 @@ function Register() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="email"
@@ -68,7 +74,8 @@ function Register() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="password"
@@ -79,7 +86,8 @@ function Register() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <select
           name="role"
@@ -90,12 +98,10 @@ function Register() {
           <option value="RECRUITER">Recruiter</option>
         </select>
 
-        <br /><br />
+        <br />
+        <br />
 
-        <button type="submit">
-          Register
-        </button>
-
+        <button type="submit">Register</button>
       </form>
 
       <p>{message}</p>
