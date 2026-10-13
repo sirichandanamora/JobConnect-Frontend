@@ -35,7 +35,7 @@ function RecruiterDashboard() {
   const fetchJobs = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8080/api/jobs"
+        "https://https://jobconnect-backend-u4x3.onrender.com/api/jobs"
       );
 
       setJobs(response.data);
@@ -50,7 +50,7 @@ function RecruiterDashboard() {
   const fetchApplications = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8080/api/applications"
+        "https://https://jobconnect-backend-u4x3.onrender.com/api/applications"
       );
 
       setApplications(response.data);
@@ -74,7 +74,7 @@ function RecruiterDashboard() {
 
     try {
       await axios.post(
-        "http://localhost:8080/api/jobs",
+        "https://https://jobconnect-backend-u4x3.onrender.com/api/jobs",
         {
           ...jobForm,
           recruiter: {
@@ -116,7 +116,7 @@ function RecruiterDashboard() {
 
     try {
       await axios.delete(
-        `http://localhost:8080/api/jobs/${jobId}`
+        `https://https://jobconnect-backend-u4x3.onrender.com/api/jobs/${jobId}`
       );
 
       setMessage("Job deleted successfully!");

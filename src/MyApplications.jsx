@@ -20,7 +20,7 @@ function MyApplications() {
   const fetchApplications = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/applications/user/${userId}`
+        `https://https://jobconnect-backend-u4x3.onrender.com/api/applications/user/${userId}`
       );
 
       setApplications(response.data);

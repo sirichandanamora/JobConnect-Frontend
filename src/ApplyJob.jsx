@@ -21,10 +21,10 @@ function ApplyJob() {
       return;
     }
 
-    try {
-      await axios.post(
-        `http://localhost:8080/api/applications?jobId=${id}&applicantId=${applicantId}`
-      );
+   try {
+       await axios.post(
+         `https://https://jobconnect-backend-u4x3.onrender.com/api/applications?jobId=${id}&applicantId=${applicantId}`
+  );
 
       setMessage("Application submitted successfully! 🎉");
 

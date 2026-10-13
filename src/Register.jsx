@@ -23,8 +23,8 @@ function Register() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/auth/register",
-        formData
+       axios.post("https://jobconnect-backend-u4x3.onrender.com/api/auth/register",
+   formData),formData
       );
 
       console.log(response.data);
