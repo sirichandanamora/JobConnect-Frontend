@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Register from "./Register";
@@ -18,35 +19,21 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Home */}
         <Route
           path="/"
-          element={<Navigate to="/register" replace />}
+          element={<Navigate to="/login" replace />}
         />
 
         {/* Authentication */}
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Public Job Pages */}
-        <Route
-          path="/jobs"
-          element={<Jobs />}
-        />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/jobs/:id" element={<JobDetails />} />
 
-        <Route
-          path="/jobs/:id"
-          element={<JobDetails />}
-        />
-
+        {/* Apply for a Job */}
         <Route
           path="/jobs/:id/apply"
           element={<ApplyJob />}
@@ -55,6 +42,16 @@ function App() {
         {/* Job Seeker Dashboard */}
         <Route
           path="/job-seeker/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["JOB_SEEKER"]}>
+              <JobSeekerHome />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Optional shortcut for Job Seeker Home */}
+        <Route
+          path="/home"
           element={
             <ProtectedRoute allowedRoles={["JOB_SEEKER"]}>
               <JobSeekerHome />
@@ -92,12 +89,11 @@ function App() {
           }
         />
 
-        {/* Unknown URL */}
+        {/* Unknown URLs */}
         <Route
           path="*"
-          element={<Navigate to="/login" replace />}
+          element={<Navigate to="/" replace />}
         />
-
       </Routes>
     </BrowserRouter>
   );
