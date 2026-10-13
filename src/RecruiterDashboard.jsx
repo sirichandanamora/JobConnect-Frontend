@@ -1,171 +1,195 @@
-import { useEffect, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./RecruiterDashboard.css";
+
+const API_URL = "https://jobconnect-backend-u4x3.onrender.com/api";
+
+const EMPTY_FORM = {
+  title: "",
+  company: "",
+  description: "",
+  location: "",
+  salary: "",
+  skills: "",
+  jobType: "Full Time",
+};
 
 function RecruiterDashboard() {
   const navigate = useNavigate();
 
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
-
+  const [jobForm, setJobForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const recruiterId = 2;
+  const recruiterId = Number(localStorage.getItem("userId"));
+  const role = localStorage.getItem("role");
 
-  const [jobForm, setJobForm] = useState({
-    title: "",
-    company: "",
-    description: "",
-    location: "",
-    salary: "",
-    skills: "",
-    jobType: "Full Time"
-  });
+  const fetchJobs = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/jobs`);
+
+      if (!Array.isArray(response.data)) {
+        throw new Error("Unexpected jobs response");
+      }
+
+      setJobs(response.data);
+      return true;
+    } catch (err) {
+      console.error("Fetch jobs failed:", err);
+      setError("Unable to load jobs. Please refresh the page.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchApplications = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/applications`);
+      setApplications(
+        Array.isArray(response.data) ? response.data : []
+      );
+    } catch (err) {
+      console.error("Fetch applications failed:", err);
+      setApplications([]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchJobs();
     fetchApplications();
-  }, []);
-
-  const fetchJobs = async () => {
-    try {
-      const response = await axios.get(
-        "https://jobconnect-backend-u4x3.onrender.com/api/jobs"
-      );
-
-      setJobs(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error(error);
-      setError("Failed to load jobs");
-      setLoading(false);
-    }
-  };
-
-  const fetchApplications = async () => {
-    try {
-      const response = await axios.get(
-        "https://jobconnect-backend-u4x3.onrender.com/api/applications"
-      );
-
-      setApplications(response.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  }, [fetchJobs, fetchApplications]);
 
   const handleChange = (e) => {
-    setJobForm({
-      ...jobForm,
-      [e.target.name]: e.target.value
-    });
+    setJobForm((previous) => ({
+      ...previous,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handlePostJob = async (e) => {
     e.preventDefault();
+    setMessage("");
+    setError("");
+
+    if (!recruiterId || !Number.isFinite(recruiterId)) {
+      setError("Your user ID is missing. Please log in again.");
+      return;
+    }
+
+    if (role !== "RECRUITER") {
+      setError("Please log in using a recruiter account.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/jobs`, {
+        ...jobForm,
+        recruiter: { id: recruiterId },
+      });
+
+      setMessage("Job posted successfully!");
+      setJobForm({ ...EMPTY_FORM });
+      setShowForm(false);
+
+      // Add the saved job immediately, then refresh from the database.
+      if (response.data?.id) {
+        setJobs((previous) => [
+          response.data,
+          ...previous.filter((job) => job.id !== response.data.id),
+        ]);
+      }
+
+      await fetchJobs();
+    } catch (err) {
+      console.error(
+        "Post job failed:",
+        err.response?.data || err.message
+      );
+
+      const data = err.response?.data;
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message || "Job posting failed. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteJob = async (jobId) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) {
+      return;
+    }
 
     setMessage("");
     setError("");
 
     try {
-      await axios.post(
-        "https://jobconnect-backend-u4x3.onrender.com/api/jobs",
-        {
-          ...jobForm,
-          recruiter: {
-            id: recruiterId
-          }
-        }
+      await axios.delete(`${API_URL}/jobs/${jobId}`);
+      setJobs((previous) =>
+        previous.filter((job) => job.id !== jobId)
       );
-
-      setMessage("Job posted successfully! 🎉");
-
-      setJobForm({
-        title: "",
-        company: "",
-        description: "",
-        location: "",
-        salary: "",
-        skills: "",
-        jobType: "Full Time"
-      });
-
-      setShowForm(false);
-
-      fetchJobs();
-
-    } catch (error) {
-      console.error(error);
-      setError("Failed to post job");
-    }
-  };
-
-  const deleteJob = async (jobId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this job?"
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    try {
-      await axios.delete(
-        `https://jobconnect-backend-u4x3.onrender.com/api/jobs/${jobId}`
+      setMessage("Job deleted successfully.");
+    } catch (err) {
+      console.error("Delete job failed:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data ||
+          "Failed to delete job."
       );
-
-      setMessage("Job deleted successfully!");
-
-      fetchJobs();
-
-    } catch (error) {
-      console.error(error);
-      setError("Failed to delete job");
     }
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("name");
     navigate("/login");
   };
 
+  // Compare IDs numerically because API and localStorage types can differ.
   const recruiterJobs = jobs.filter(
-    (job) =>
-      job.recruiter &&
-      job.recruiter.id === recruiterId
+    (job) => Number(job.recruiter?.id) === recruiterId
   );
 
   const recruiterApplications = applications.filter(
     (application) =>
-      application.job &&
-      application.job.recruiter &&
-      application.job.recruiter.id === recruiterId
+      Number(application.job?.recruiter?.id) === recruiterId
   );
+
+  if (role !== "RECRUITER" || !recruiterId) {
+    return (
+      <div className="recruiter-page">
+        <h2>Recruiter login required</h2>
+        <p>Please log in with your recruiter account.</p>
+        <button onClick={() => navigate("/login")}>Go to Login</button>
+      </div>
+    );
+  }
 
   return (
     <div className="recruiter-page">
-
-      {/* NAVBAR */}
       <nav className="recruiter-navbar">
-
-        <div className="recruiter-brand">
-          💼 JobConnect
-        </div>
+        <div className="recruiter-brand">💼 JobConnect</div>
 
         <div className="recruiter-nav-links">
-
           <button
             onClick={() =>
-              document
-                .getElementById("my-jobs")
-                ?.scrollIntoView({
-                  behavior: "smooth"
-                })
+              document.getElementById("my-jobs")?.scrollIntoView({
+                behavior: "smooth",
+              })
             }
           >
             My Jobs
@@ -173,105 +197,80 @@ function RecruiterDashboard() {
 
           <button
             onClick={() =>
-              document
-                .getElementById("applications")
-                ?.scrollIntoView({
-                  behavior: "smooth"
-                })
+              document.getElementById("applications")?.scrollIntoView({
+                behavior: "smooth",
+              })
             }
           >
             Applications
           </button>
 
-          <button
-            className="recruiter-logout"
-            onClick={logout}
-          >
+          <button className="recruiter-logout" onClick={logout}>
             Logout
           </button>
-
         </div>
-
       </nav>
 
-      {/* HERO */}
       <section className="recruiter-hero">
-
         <div>
-
-          <span className="recruiter-badge">
-            👨‍💼 RECRUITER PORTAL
-          </span>
-
-          <h1>
-            Recruit the Right Talent
-          </h1>
-
+          <span className="recruiter-badge">👨‍💼 RECRUITER PORTAL</span>
+          <h1>Recruit the Right Talent</h1>
           <p>
-            Post opportunities, manage your jobs,
-            and find talented candidates.
+            Post opportunities, manage your jobs, and find talented
+            candidates.
           </p>
 
           <button
             className="post-job-main-btn"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setMessage("");
+              setError("");
+              setShowForm((previous) => !previous);
+            }}
           >
             + Post New Job
           </button>
-
         </div>
-
       </section>
 
-      {/* MESSAGES */}
       {message && (
-        <div className="recruiter-success">
+        <div className="recruiter-success" role="status">
           ✓ {message}
         </div>
       )}
 
       {error && (
-        <div className="recruiter-error">
+        <div className="recruiter-error" role="alert">
           {error}
         </div>
       )}
 
-      {/* POST JOB FORM */}
       {showForm && (
-
         <section className="post-job-section">
-
           <div className="post-job-card">
-
             <div className="form-header">
               <div>
-                <span className="section-label">
-                  NEW OPPORTUNITY
-                </span>
-
+                <span className="section-label">NEW OPPORTUNITY</span>
                 <h2>Post a Job</h2>
-
-                <p>
-                  Add details about your job opening.
-                </p>
+                <p>Add details about your job opening.</p>
               </div>
 
               <button
+                type="button"
                 className="close-form-btn"
                 onClick={() => setShowForm(false)}
+                aria-label="Close form"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handlePostJob}>
-
               <div className="form-grid">
-
                 <div className="form-group">
-                  <label>Job Title</label>
-
+                  <label htmlFor="title">Job Title</label>
                   <input
+                    id="title"
                     name="title"
                     value={jobForm.title}
                     onChange={handleChange}
@@ -281,9 +280,9 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label>Company</label>
-
+                  <label htmlFor="company">Company</label>
                   <input
+                    id="company"
                     name="company"
                     value={jobForm.company}
                     onChange={handleChange}
@@ -293,9 +292,9 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label>Location</label>
-
+                  <label htmlFor="location">Location</label>
                   <input
+                    id="location"
                     name="location"
                     value={jobForm.location}
                     onChange={handleChange}
@@ -305,9 +304,9 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label>Salary</label>
-
+                  <label htmlFor="salary">Salary</label>
                   <input
+                    id="salary"
                     name="salary"
                     value={jobForm.salary}
                     onChange={handleChange}
@@ -317,9 +316,9 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label>Skills</label>
-
+                  <label htmlFor="skills">Skills</label>
                   <input
+                    id="skills"
                     name="skills"
                     value={jobForm.skills}
                     onChange={handleChange}
@@ -329,9 +328,9 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label>Job Type</label>
-
+                  <label htmlFor="jobType">Job Type</label>
                   <select
+                    id="jobType"
                     name="jobType"
                     value={jobForm.jobType}
                     onChange={handleChange}
@@ -342,18 +341,17 @@ function RecruiterDashboard() {
                     <option>Contract</option>
                   </select>
                 </div>
-
               </div>
 
               <div className="form-group">
-                <label>Job Description</label>
-
+                <label htmlFor="description">Job Description</label>
                 <textarea
+                  id="description"
                   name="description"
                   value={jobForm.description}
                   onChange={handleChange}
                   placeholder="Describe the role and responsibilities..."
-                  rows="5"
+                  rows={5}
                   required
                 />
               </div>
@@ -361,20 +359,16 @@ function RecruiterDashboard() {
               <button
                 type="submit"
                 className="submit-job-btn"
+                disabled={submitting}
               >
-                Publish Job
+                {submitting ? "Publishing..." : "Publish Job"}
               </button>
-
             </form>
-
           </div>
-
         </section>
       )}
 
-      {/* STATISTICS */}
       <section className="recruiter-stats">
-
         <div className="stat-card">
           <span>💼</span>
           <div>
@@ -395,37 +389,25 @@ function RecruiterDashboard() {
           <span>👥</span>
           <div>
             <strong>
-              {new Set(
-                recruiterApplications.map(
-                  (application) =>
-                    application.applicant?.id
-                )
-              ).size}
+              {
+                new Set(
+                  recruiterApplications
+                    .map((application) => application.applicant?.id)
+                    .filter((id) => id != null)
+                ).size
+              }
             </strong>
             <p>Candidates</p>
           </div>
         </div>
-
       </section>
 
-      {/* MY JOBS */}
-      <section
-        id="my-jobs"
-        className="recruiter-section"
-      >
-
+      <section id="my-jobs" className="recruiter-section">
         <div className="section-heading">
-
           <div>
-            <span className="section-label">
-              JOB MANAGEMENT
-            </span>
-
+            <span className="section-label">JOB MANAGEMENT</span>
             <h2>My Job Postings</h2>
-
-            <p>
-              Manage the opportunities you've posted.
-            </p>
+            <p>Manage the opportunities you've posted.</p>
           </div>
 
           <button
@@ -434,26 +416,15 @@ function RecruiterDashboard() {
           >
             + Post Job
           </button>
-
         </div>
 
         {loading ? (
-
-          <div className="recruiter-loading">
-            Loading jobs...
-          </div>
-
+          <div className="recruiter-loading">Loading jobs...</div>
         ) : recruiterJobs.length === 0 ? (
-
           <div className="recruiter-empty">
             <div>💼</div>
-
             <h3>No jobs posted yet</h3>
-
-            <p>
-              Create your first job opportunity.
-            </p>
-
+            <p>Post a job to see it here and on the jobs page.</p>
             <button
               className="post-job-main-btn"
               onClick={() => setShowForm(true)}
@@ -461,124 +432,70 @@ function RecruiterDashboard() {
               + Post New Job
             </button>
           </div>
-
         ) : (
-
           <div className="recruiter-jobs">
-
             {recruiterJobs.map((job) => (
-
-              <div
-                className="recruiter-job-card"
-                key={job.id}
-              >
-
+              <div className="recruiter-job-card" key={job.id}>
                 <div className="job-company-icon">
-                  {job.company
-                    ?.charAt(0)
-                    .toUpperCase()}
+                  {job.company?.charAt(0)?.toUpperCase() || "J"}
                 </div>
 
                 <div className="recruiter-job-info">
-
                   <h3>{job.title}</h3>
-
-                  <p className="company">
-                    {job.company}
-                  </p>
+                  <p className="company">{job.company}</p>
 
                   <div className="job-meta">
-                    <span>
-                      📍 {job.location}
-                    </span>
-
-                    <span>
-                      💰 {job.salary}
-                    </span>
-
-                    <span>
-                      💼 {job.jobType}
-                    </span>
+                    <span>📍 {job.location}</span>
+                    <span>💰 {job.salary || "Not specified"}</span>
+                    <span>💼 {job.jobType || "Not specified"}</span>
                   </div>
 
-                  <div className="job-skills">
-                    {job.skills}
-                  </div>
-
+                  <div className="job-skills">{job.skills}</div>
                 </div>
 
                 <div className="job-actions">
-
                   <button
                     className="edit-btn"
                     onClick={() =>
-                      alert(
-                        "Edit Job feature coming next!"
-                      )
+                      navigate(`/jobs/${job.id}`)
                     }
                   >
-                    Edit
+                    View
                   </button>
 
                   <button
                     className="delete-btn"
-                    onClick={() =>
-                      deleteJob(job.id)
-                    }
+                    onClick={() => deleteJob(job.id)}
                   >
                     Delete
                   </button>
-
                 </div>
-
               </div>
-
             ))}
-
           </div>
-
         )}
-
       </section>
 
-      {/* APPLICATIONS */}
       <section
         id="applications"
         className="recruiter-applications-section"
       >
-
         <div className="section-heading">
-
           <div>
-            <span className="section-label">
-              CANDIDATES
-            </span>
-
+            <span className="section-label">CANDIDATES</span>
             <h2>Applications</h2>
-
-            <p>
-              Review candidates who applied to your jobs.
-            </p>
+            <p>Review candidates who applied to your jobs.</p>
           </div>
-
         </div>
 
         {recruiterApplications.length === 0 ? (
-
           <div className="recruiter-empty">
             <div>📋</div>
-
             <h3>No applications yet</h3>
-
-            <p>
-              Applications from candidates will appear here.
-            </p>
+            <p>Applications from candidates will appear here.</p>
           </div>
-
         ) : (
-
           <div className="applications-table">
-
             <div className="table-header">
               <span>Candidate</span>
               <span>Job</span>
@@ -586,64 +503,37 @@ function RecruiterDashboard() {
               <span>Applied On</span>
             </div>
 
-            {recruiterApplications.map(
-              (application) => (
-
-                <div
-                  className="application-row"
-                  key={application.id}
-                >
-
-                  <div>
-                    <strong>
-                      {application.applicant?.name}
-                    </strong>
-
-                    <small>
-                      {application.applicant?.email}
-                    </small>
-                  </div>
-
-                  <span>
-                    {application.job.title}
-                  </span>
-
-                  <span className="application-status">
-                    {application.status}
-                  </span>
-
-                  <span>
-                    {new Date(
-                      application.appliedAt
-                    ).toLocaleDateString()}
-                  </span>
-
+            {recruiterApplications.map((application) => (
+              <div className="application-row" key={application.id}>
+                <div>
+                  <strong>
+                    {application.applicant?.name || "Candidate"}
+                  </strong>
+                  <small>{application.applicant?.email || ""}</small>
                 </div>
 
-              )
-            )}
-
+                <span>{application.job?.title || "Job"}</span>
+                <span className="application-status">
+                  {application.status || "Pending"}
+                </span>
+                <span>
+                  {application.appliedAt
+                    ? new Date(
+                        application.appliedAt
+                      ).toLocaleDateString()
+                    : "—"}
+                </span>
+              </div>
+            ))}
           </div>
-
         )}
-
       </section>
 
-      {/* FOOTER */}
       <footer className="recruiter-footer">
-
         <strong>💼 JobConnect</strong>
-
-        <p>
-          Connecting recruiters with talented candidates.
-        </p>
-
-        <small>
-          © 2026 JobConnect. All rights reserved.
-        </small>
-
+        <p>Connecting recruiters with talented candidates.</p>
+        <small>© 2026 JobConnect. All rights reserved.</small>
       </footer>
-
     </div>
   );
 }
