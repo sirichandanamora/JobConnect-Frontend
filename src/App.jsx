@@ -15,15 +15,16 @@ import JobDetails from "./JobDetails";
 import ApplyJob from "./ApplyJob";
 import MyApplications from "./MyApplications";
 
+
+import Home from "./Home";
+
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Home */}
-        <Route
-          path="/"
-          element={<Navigate to="/login" replace />}
-        />
+        <Route path="/" element={<Home />} />
 
         {/* Authentication */}
         <Route path="/register" element={<Register />} />
